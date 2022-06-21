@@ -9,44 +9,10 @@ function getCurrentPage() {
 }
 
 /**
- * 微信登录（获取 code）
- * @returns {Promise}
- */
-export function wxLogin() {
-  return new Promise((resolve, reject) => {
-    wx.login({
-      success: res => {
-        if (res.code) {
-          resolve(res);
-        } else {
-          reject(res);
-        }
-      },
-      fail: err => {
-        reject(err);
-      },
-    });
-  });
-}
-
-/**
- * api 登录
- * @param {object|null} params 
- * @returns 
- */
-export async function apiLogin(params) {
-  const res = await wxLogin();
-  params = params || {};
-  params.code = res.code;
-  const response = await api.post_users_login(params);
-  return response;
-}
-
-/**
  * 验证登录
  * @returns {string|null}
  */
-export function validateLogin() {
+ export function validateLogin() {
   const data = getApp().globalData;
   if (!data.token) {
     return '没有token';
@@ -68,67 +34,19 @@ export function isLogin() {
   return !error;
 }
 
-/**
- * 登录用户
- * @param {object} user 
- * @param {string|null} token 
- */
-export function loginUser(user, token) {
-  const app = getApp();
-
-  app.globalData.user = user;
-  app.globalData.token = token || user.token;
-
-  if (isLogin()) {
-    const cbs = callbacks.slice();
-    callbacks = [];
-    cbs.forEach(([fn, group]) => {
-      fn();
-    });
-  }
-}
-
-let loginHandler = null;
-
-/**
- * 登录
- * @returns 
- */
-export function login() {
-  if (isLogin()) {
-    return Promise.resolve(true);
-  }
-  
-  if (loginHandler) {
-    return loginHandler;
-  }
-
-  wx.showLoading({
-    title: '正在登录...',
-  });
-
-  loginHandler = apiLogin().then(response => {
-    loginUser(response, response.token);
-    return response;
-  }).finally(() => {
-    loginHandler = null;
-    wx.hideLoading()
-  });
-
-  return loginHandler;
-}
-
-/**
- * 登出
- */
-export function logout() {
-  const app = getApp();
-  app.globalData.user = null;
-  app.globalData.token = null;
-}
-
 // 登录回调栈
 let callbacks = [];
+
+/**
+ * 执行登陆回调
+ */
+function handleLogin() {
+  const cbs = callbacks.slice();
+  callbacks = [];
+  cbs.forEach(([fn, group]) => {
+    fn();
+  });
+}
 
 /**
  * 添加登录回调
@@ -177,4 +95,104 @@ export function offLogin(group) {
   } else {
     callbacks = callbacks.filter(item => item[1] != group);
   }
+}
+
+/**
+ * 微信登录获取 code，使用 Promise 包装
+ * @returns {Promise}
+ */
+export function wxLogin() {
+  return new Promise(function (resolve, reject) {
+    wx.login({
+      success(res) {
+        if (res.code) {
+          resolve(res);
+        } else {
+          reject(res);
+        }
+      },
+      fail(err) {
+        reject(err);
+      },
+    });
+  });
+}
+
+/**
+ * api 登录
+ * @param {any} params 
+ * @returns 
+ */
+export async function apiLogin(params) {
+  throw '请覆写 apiLogin 方法';
+}
+
+/**
+ * 获取登录数据
+ * @param {object|null} params 
+ * @returns 
+ */
+export async function fetchLoginData(params) {
+  const res = await wxLogin();
+  params = params || {};
+  params.code = res.code;
+  const response = await apiLogin(params);
+  return response;
+}
+
+/**
+ * 记录登录数据
+ * @param {object} user 
+ * @param {string|null} token 
+ */
+export function loginWith(user, token) {
+  const app = getApp();
+
+  app.globalData.user = user;
+  app.globalData.token = token || user.token;
+
+  if (isLogin()) {
+    handleLogin();
+  }
+}
+
+let loginHandler = null;
+
+/**
+ * 登录
+ * @returns 
+ */
+export function login() {
+  if (isLogin()) {
+    return Promise.resolve(true);
+  }
+  
+  if (loginHandler) {
+    return loginHandler;
+  }
+
+  // wx.showLoading({
+  //   title: '正在登录...',
+  // });
+
+  loginHandler = fetchLoginData();
+  
+  loginHandler.then(response => {
+    loginWith(response, response.token);
+    return response;
+  }).finally(() => {
+    loginHandler = null;
+    // wx.hideLoading();
+  });
+
+  return loginHandler;
+}
+
+/**
+ * 登出
+ */
+export function logout() {
+  const app = getApp();
+  app.globalData.user = null;
+  app.globalData.token = null;
 }
