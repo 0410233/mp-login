@@ -171,9 +171,10 @@ export function login() {
     return loginHandler;
   }
 
-  // wx.showLoading({
-  //   title: '正在登录...',
-  // });
+  wx.showLoading({
+    title: '正在登录...',
+    mask: true,
+  });
 
   loginHandler = fetchLoginData();
   
