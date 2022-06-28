@@ -8,6 +8,12 @@ function getCurrentPage() {
   return pages[pages.length - 1];
 }
 
+
+
+////////////////////////////////////////////////////////////////////
+//                          登录检测                              //
+////////////////////////////////////////////////////////////////////
+
 /**
  * 验证登录
  * @returns {string|null}
@@ -33,6 +39,12 @@ export function isLogin() {
   const error = validateLogin();
   return !error;
 }
+
+
+
+////////////////////////////////////////////////////////////////////
+//                          登录回调                              //
+////////////////////////////////////////////////////////////////////
 
 // 登录回调栈
 let callbacks = [];
@@ -97,11 +109,16 @@ export function offLogin(group) {
   }
 }
 
+
+////////////////////////////////////////////////////////////////////
+//                          登录流程                              //
+////////////////////////////////////////////////////////////////////
+
 /**
  * 微信登录获取 code，使用 Promise 包装
  * @returns {Promise}
  */
-export function wxLogin() {
+function wxLogin() {
   return new Promise(function (resolve, reject) {
     wx.login({
       success(res) {
@@ -123,7 +140,7 @@ export function wxLogin() {
  * @param {any} params 
  * @returns 
  */
-export async function apiLogin(params) {
+async function apiLogin(params) {
   throw '请覆写 apiLogin 方法';
 }
 
@@ -132,7 +149,7 @@ export async function apiLogin(params) {
  * @param {object|null} params 
  * @returns 
  */
-export async function fetchLoginData(params) {
+async function fetchLoginData(params) {
   const res = await wxLogin();
   params = params || {};
   params.code = res.code;
